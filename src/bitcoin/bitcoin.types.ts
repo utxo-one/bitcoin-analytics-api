@@ -113,7 +113,8 @@ export interface TransactionOutput {
     asm: string;
     hex: string;
     type: string;
-    addresses?: string[]; // Assuming there can be multiple addresses
+    desc?: string; // Optional fields should be marked as such
+    address?: string; // Assuming there can be multiple addresses
   };
 }
 

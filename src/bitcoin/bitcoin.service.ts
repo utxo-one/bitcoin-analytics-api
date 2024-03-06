@@ -16,6 +16,7 @@ import { Repository } from 'typeorm';
 import { TransactionEntity } from './entities/transaction.entity';
 import { TransactionInputEntity } from './entities/transaction-input.entity';
 import { TransactionOutputEntity } from './entities/transaction-output.entity';
+import * as BitcoinLib from 'bitcoinjs-lib';
 
 @Injectable()
 export class BitcoinService {
@@ -29,7 +30,6 @@ export class BitcoinService {
     private transactionInputRepository: Repository<TransactionInputEntity>,
     @InjectRepository(TransactionOutputEntity)
     private transactionOutputRepository: Repository<TransactionOutputEntity>,
-
   ) {}
 
   private rpcUser = this.configService.get<string>('NODE_USERNAME');
@@ -56,7 +56,6 @@ export class BitcoinService {
 
     try {
       const response = await axios(config);
-      console.log(`${method} Response:`, response.data);
       if (response.data.error) {
         console.log(`RPC Error: ${response.data.error.message}`);
       }
@@ -108,19 +107,23 @@ export class BitcoinService {
   }
 
   async importBlockchainData(): Promise<void> {
-    const count = await this.blockRepository.count();
-    if (count > 0) {
-      console.log('Blocks already imported.');
-      return;
-    }
-  
+    // Find the highest block height in the database
+    const latestBlockEntity = await this.blockRepository.find({
+      order: { height: 'DESC' },
+      take: 1,
+    });
+    const startHeight = latestBlockEntity[0]
+      ? latestBlockEntity[0].height + 150000
+      : 0;
+
     const currentBlockCount = await this.getBlockCount();
-    console.log(`Current block count: ${currentBlockCount}`);
-  
-    for (let height = 0; height < currentBlockCount; height++) {
+    console.log(`Current block count from network: ${currentBlockCount}`);
+    console.log(`Starting import from block height: ${startHeight}`);
+
+    for (let height = startHeight; height < currentBlockCount; height++) {
       const blockHash = await this.getBlockHash(height);
       const blockData = await this.getBlock(blockHash);
-  
+
       const block = this.blockRepository.create({
         hash: blockData.hash,
         confirmations: blockData.confirmations,
@@ -142,79 +145,136 @@ export class BitcoinService {
         previousblockhash: blockData.previousblockhash,
         nextblockhash: blockData.nextblockhash,
       });
-  
+
       // Save the block first to ensure it exists for foreign key constraints
       const savedBlock = await this.blockRepository.save(block);
-  
+
+      console.log(`Imported block ${height}...`);
+
       // Now, import each transaction in the block
       for (const txid of blockData.tx) {
         console.log(`Importing transaction ${txid}...`);
 
         //skip genesis block
-        if (txid === '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b') {
-            continue;
+        if (
+          txid ===
+          '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'
+        ) {
+          continue;
         }
 
         const transactionData = await this.getRawTransaction(txid);
+        console.log('transactionData', transactionData);
+        console.log('vout', transactionData.vout);
+        console.log('vin', transactionData.vin);
 
-        const transaction = this.transactionRepository.create({
-            ...transactionData,
-            block: savedBlock,
-          });
-          
-       const savedTransaction = await this.transactionRepository.save(transaction);
+        const transaction = await this.transactionRepository.create({
+          ...transactionData,
+          block: savedBlock,
+        });
+
+        const savedTransaction =
+          await this.transactionRepository.save(transaction);
+
+        console.log('transaction saved', savedTransaction);
 
         // Import transaction inputs
         for (const vin of transactionData.vin) {
-            if (typeof vin.coinbase === 'string') {
-                console.log("coinbase transaction");
-              // Handle coinbase transaction input
-              const input = this.transactionInputRepository.create({
-                transaction: savedTransaction,
-                txid: null,
-                vout: null, 
-                scriptSigAsm: null, // Coinbase transactions don't have a scriptSig
-                scriptSigHex: null, // Coinbase transactions don't have a scriptSig
-                sequence: vin.sequence,
-                coinbase: vin.coinbase,
-              });
-              await this.transactionInputRepository.save(input);
+          console.log('importing inputs', vin);
+          if (typeof vin.coinbase === 'string') {
+            console.log('coinbase transaction');
+            // Handle coinbase transaction input
+            const input = this.transactionInputRepository.create({
+              transaction: savedTransaction,
+              txid: null,
+              vout: null,
+              scriptSigAsm: null, // Coinbase transactions don't have a scriptSig
+              scriptSigHex: null, // Coinbase transactions don't have a scriptSig
+              sequence: vin.sequence,
+              coinbase: vin.coinbase,
+            });
+            await this.transactionInputRepository.save(input);
+          } else {
+            console.log('regular transaction');
+            // Handle regular transaction input
+            const input = this.transactionInputRepository.create({
+              transaction: savedTransaction,
+              txid: vin.txid,
+              vout: vin.vout,
+              scriptSigAsm: vin.scriptSig ? vin.scriptSig.asm : null,
+              scriptSigHex: vin.scriptSig ? vin.scriptSig.hex : null,
+              sequence: vin.sequence,
+            });
+            await this.transactionInputRepository.save(input);
+          }
+        }
+
+        // Import transaction outputs
+        // Import transaction outputs
+        for (const vout of transactionData.vout) {
+          if (!vout.scriptPubKey.asm || vout.scriptPubKey.asm.length < 1) {
+            console.error('vout.scriptPubKey.asm is null');
+            console.log(vout.scriptPubKey);
+            throw new Error('vout.scriptPubKey.asm is null');
+          }
+
+          let address = null;
+
+          // Check if the address is directly available
+          if (
+            vout.scriptPubKey.address &&
+            vout.scriptPubKey.address.length > 0
+          ) {
+            // Note: Bitcoin Core returns addresses in an array, so we take the first one.
+            address = vout.scriptPubKey.address;
+          } else if (vout.scriptPubKey.asm) {
+            // Extracting address or public key from the asm
+            const parts = vout.scriptPubKey.asm.split(' ');
+            // Checking for P2PK (Pay to Public Key) pattern (public key followed by OP_CHECKSIG)
+            if (parts.length >= 2 && parts[1] === 'OP_CHECKSIG') {
+              address = parts[0]; // Assuming the public key is the address for this case
             } else {
-                console.log("regular transaction");
-              // Handle regular transaction input
-              const input = this.transactionInputRepository.create({
-                transaction: savedTransaction,
-                txid: vin.txid,
-                vout: vin.vout,
-                scriptSigAsm: vin.scriptSig ? vin.scriptSig.asm : null,
-                scriptSigHex: vin.scriptSig ? vin.scriptSig.hex : null,
-                sequence: vin.sequence,
-              });
-              await this.transactionInputRepository.save(input);
+              // For other patterns, attempt to find a hash-like part (e.g., P2PKH)
+              const potentialAddressPart = parts.find(
+                (part) => part.length === 40,
+              );
+              if (potentialAddressPart) {
+                address = this.convertHashToAddress(potentialAddressPart); // Placeholder for conversion logic
+              }
             }
           }
 
-        // Import transaction outputs
-        for (const vout of transactionData.vout) {
-
-          const output = this.transactionOutputRepository.create({
+          const output = await this.transactionOutputRepository.create({
             transaction: savedTransaction,
             value: vout.value,
             n: vout.n,
             scriptPubKeyAsm: vout.scriptPubKey.asm,
             scriptPubKeyHex: vout.scriptPubKey.hex,
             scriptPubKeyType: vout.scriptPubKey.type,
-            scriptPubKeyAddress: vout.scriptPubKey.addresses ? vout.scriptPubKey.addresses.join(', ') : null, // Handle multiple addresses
+            scriptPubKeyDesc: vout.scriptPubKey.desc
+              ? vout.scriptPubKey.desc
+              : null,
+            scriptPubKeyAddress: address, // Use the extracted address or public key
           });
+
           await this.transactionOutputRepository.save(output);
         }
+
+        console.log(
+          `Imported block ${height} of ${currentBlockCount}, including ${blockData.tx.length} transactions.`,
+        );
       }
-  
-      console.log(`Imported block ${height} of ${currentBlockCount}, including ${blockData.tx.length} transactions.`);
+
+      console.log('Blockchain data import completed.');
     }
-  
-    console.log('Blockchain data import completed.');
   }
-  
-  
+
+  private async convertHashToAddress(hash: string): Promise<string> {
+    const buffer = Buffer.from(hash, 'hex');
+    const address = BitcoinLib.address.toBase58Check(
+      buffer,
+      BitcoinLib.networks.bitcoin.pubKeyHash,
+    );
+    return address;
+  }
 }

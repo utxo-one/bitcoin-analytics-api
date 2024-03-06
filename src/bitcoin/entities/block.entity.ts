@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { TransactionEntity } from './transaction.entity';
 
 @Entity('blocks')
@@ -7,6 +13,7 @@ export class BlockEntity {
   id: number;
 
   @Column()
+  @Index({ unique: true })
   hash: string;
 
   @Column()
@@ -22,6 +29,7 @@ export class BlockEntity {
   weight: number;
 
   @Column()
+  @Index({ unique: true })
   height: number;
 
   @Column()
@@ -33,7 +41,7 @@ export class BlockEntity {
   @Column()
   merkleroot: string;
 
-  @Column('simple-array')
+  @Column('json')
   tx: string[];
 
   @Column()
@@ -42,7 +50,7 @@ export class BlockEntity {
   @Column()
   mediantime: number;
 
-  @Column({type: 'bigint'})
+  @Column({ type: 'bigint' })
   nonce: number;
 
   @Column()
@@ -63,6 +71,6 @@ export class BlockEntity {
   @Column({ nullable: true })
   nextblockhash: string;
 
-  @OneToMany(() => TransactionEntity, transaction => transaction.block)
+  @OneToMany(() => TransactionEntity, (transaction) => transaction.block)
   transactions: TransactionEntity[];
 }
