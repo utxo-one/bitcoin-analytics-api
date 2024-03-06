@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { TransactionEntity } from './transaction.entity';
 
@@ -19,11 +20,14 @@ export class TransactionInputEntity {
   @Column()
   transactionId: string;
 
-  @Column({ nullable: true})
+  @Column({ nullable: true })
   txid: string;
 
-  @Column({ nullable: true})
+  @Column({ nullable: true })
   vout: number;
+
+  @Column({ nullable: true })
+  txinwitness: string;
 
   @Column('text', { nullable: true })
   scriptSigAsm: string;

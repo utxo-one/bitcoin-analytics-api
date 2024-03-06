@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { TransactionEntity } from './transaction.entity';
 
 @Entity('transaction_outputs')
@@ -6,7 +13,7 @@ export class TransactionOutputEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => TransactionEntity, transaction => transaction.vout)
+  @ManyToOne(() => TransactionEntity, (transaction) => transaction.vout)
   @JoinColumn({ name: 'transactionId' })
   transaction: TransactionEntity;
 
@@ -19,15 +26,19 @@ export class TransactionOutputEntity {
   @Column()
   n: number;
 
-  @Column('text', { nullable: true })
+  @Column('text')
   scriptPubKeyAsm: string;
 
-  @Column('text', { nullable: true })
+  @Column('text')
   scriptPubKeyHex: string;
 
   @Column({ nullable: true })
   scriptPubKeyType: string;
 
   @Column({ nullable: true })
+  scriptPubKeyDesc: string;
+
+  @Column({ nullable: true })
+  @Index()
   scriptPubKeyAddress: string;
 }
