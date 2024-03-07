@@ -149,3 +149,11 @@ export interface Transaction {
   bip125_replaceable: 'yes' | 'no' | 'unknown'; // Use literal types for known values
   details: TransactionDetail[];
 }
+
+export interface ScriptPubKey {
+  asm: string;
+  hex: string;
+  desc?: string;
+  type: string;
+  address?: string;
+}
