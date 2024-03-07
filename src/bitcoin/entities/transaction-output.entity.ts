@@ -35,7 +35,7 @@ export class TransactionOutputEntity {
   @Column({ nullable: true })
   scriptPubKeyType: string;
 
-  @Column({ nullable: true })
+  @Column('blob', { nullable: true })
   scriptPubKeyDesc: string;
 
   @Column({ nullable: true })

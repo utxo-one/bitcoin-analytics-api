@@ -4,8 +4,10 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
   Index,
+  OneToOne,
 } from 'typeorm';
 import { TransactionEntity } from './transaction.entity';
+import { ExchangeRateEntity } from './exchange-rate.entity';
 
 @Entity('blocks')
 export class BlockEntity {
@@ -73,4 +75,7 @@ export class BlockEntity {
 
   @OneToMany(() => TransactionEntity, (transaction) => transaction.block)
   transactions: TransactionEntity[];
+
+  @OneToOne(() => ExchangeRateEntity, (exchangeRate) => exchangeRate.block)
+  exchangeRate: ExchangeRateEntity;
 }
