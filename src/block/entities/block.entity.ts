@@ -6,8 +6,8 @@ import {
   Index,
   OneToOne,
 } from 'typeorm';
-import { TransactionEntity } from './transaction.entity';
-import { ExchangeRateEntity } from './exchange-rate.entity';
+import { TransactionEntity } from '../../transaction/entities/transaction.entity';
+import { ExchangeRateEntity } from '../../exchange-rate/entities/exchange-rate.entity';
 
 @Entity('blocks')
 export class BlockEntity {

@@ -7,10 +7,10 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { BlockEntity } from './block.entity';
+import { BlockEntity } from '../../block/entities/block.entity';
 import { TransactionInputEntity } from './transaction-input.entity';
 import { TransactionOutputEntity } from './transaction-output.entity';
-import { TransactionDetail } from '../bitcoin.types';
+import { TransactionDetail } from 'src/bitcoind/bitcoind.types';
 
 @Entity('transactions')
 export class TransactionEntity {

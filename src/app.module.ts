@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { BitcoinService } from './bitcoin/bitcoin.service';
+
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BlockEntity } from './bitcoin/entities/block.entity';
-import { TransactionEntity } from './bitcoin/entities/transaction.entity';
-import { BitcoinModule } from './bitcoin/bitcoin.module';
+import { BlockEntity } from './block/entities/block.entity';
+
+import { BitcoindModule } from './bitcoind/bitcoin.module';
 import { DataSource } from 'typeorm';
+import { ImportService } from './import/import.service';
+import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
+import { ImportModule } from './import/import.module';
+
+import { TransactionModule } from './transaction/transaction.module';
+import { BlockModule } from './block/block.module';
 
 @Module({
   imports: [
@@ -25,8 +31,11 @@ import { DataSource } from 'typeorm';
       synchronize: true,
       logging: ['error'],
     }),
-
-    BitcoinModule,
+    BitcoindModule,
+    ExchangeRateModule,
+    ImportModule,
+    BlockModule,
+    TransactionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
