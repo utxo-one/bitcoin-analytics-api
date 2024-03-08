@@ -1,73 +1,77 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Bitcoin Analytics App
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Introduction
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This guide outlines the setup process for the Bitcoin Analytics App, a NestJS-based application that imports and analyzes Bitcoin blockchain data using a Bitcoin Core node and stores it in a MySQL database.
 
-## Description
+## Prerequisites
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Node.js (LTS version)
+- NestJS CLI
+- Bitcoin Core (v0.20.0 or later recommended)
+- MySQL (v5.7 or later)
 
-## Installation
+## Setup Instructions
 
-```bash
-$ npm install
-```
+### 1. NestJS Setup
 
-## Running the app
+- **Install Node.js**: Download and install the LTS version from [Node.js official website](https://nodejs.org/).
 
-```bash
-# development
-$ npm run start
+- **Install NestJS CLI**: Open your terminal and run the following command:
 
-# watch mode
-$ npm run start:dev
+  ```bash
+  npm i -g @nestjs/cli
+  ```
 
-# production mode
-$ npm run start:prod
-```
+- **Project Setup**: Clone the project repository and install dependencies:
+  ```bash
+  git clone <your-repository-url>
+  cd <project-directory>
+  npm install
+  ```
 
-## Test
+### 2. Bitcoin Core Configuration
 
-```bash
-# unit tests
-$ npm run test
+- **Edit Bitcoin Core Config**: Locate your `bitcoin.conf` file and add the following lines to configure the RPC server, enable the transaction index, and adjust the RPC work queue. The `bitcoin.conf` file is typically found in the Bitcoin data directory.
 
-# e2e tests
-$ npm run test:e2e
+  ```
+  server=1
+  txindex=1
+  rpcuser=<your-rpc-username>
+  rpcpassword=<your-rpc-password>
+  rpcworkqueue=128
+  ```
 
-# test coverage
-$ npm run test:cov
-```
+- **Restart Bitcoin Core**: For the changes to take effect, restart your Bitcoin Core node.
 
-## Support
+### 3. Linux Configuration
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **Increase `ulimit`**: To increase the number of allowable open files for the system, which is beneficial for both Bitcoin Core and the MySQL database, you can use the following command:
+  ```bash
+  ulimit -n 4096
+  ```
+  It's recommended to add this command to your `.bashrc` or `.bash_profile` for persistence across sessions.
 
-## Stay in touch
+### 4. Environment Configuration
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- **Configure `.env` File**: Create a `.env` file in the root of your project directory with the following contents, adjusting values according to your setup:
+  ```
+  DB_HOST=localhost
+  DB_PORT=3306
+  DB_USERNAME=<your-mysql-username>
+  DB_PASSWORD=<your-mysql-password>
+  DB_DATABASE=bitcoin_analytics
+  NODE_RPC_URL=http://<your-rpc-user>:<your-rpc-password>@localhost:8332/
+  ```
 
-## License
+### 5. Starting the App
 
-Nest is [MIT licensed](LICENSE).
+- **Run the Application**: With your environment configured, you can start the application by running:
+  ```bash
+  npm run start
+  ```
+  This will start the NestJS server, and the application will begin to import data from your configured Bitcoin Core node into the MySQL database.
+
+## Note
+
+Ensure that your Bitcoin Core node is fully synchronized with the blockchain before starting the import process. Depending on the blockchain size and your system's specifications, synchronization and data import might take some time.
