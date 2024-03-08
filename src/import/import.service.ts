@@ -33,7 +33,6 @@ export class ImportService {
   ) {}
 
   async importBlockchainData(): Promise<void> {
-    // Find the highest block height in the database
     const latestBlockEntity = await this.blockRepository.find({
       order: { height: 'DESC' },
       take: 1,
@@ -41,83 +40,114 @@ export class ImportService {
     const startHeight = latestBlockEntity[0]
       ? latestBlockEntity[0].height + 1
       : 0;
-
     const currentBlockCount = await this.bitcoinService.getBlockCount();
+
     console.log(`Current block count from network: ${currentBlockCount}`);
     console.log(`Starting import from block height: ${startHeight}`);
 
     for (let height = startHeight; height < currentBlockCount; height++) {
+      console.time(`Block ${height} import time`);
+
       const blockHash = await this.bitcoinService.getBlockHash(height);
       const blockData = await this.bitcoinService.getBlock(blockHash);
 
-      const block = this.blockRepository.create({
-        ...blockData,
-      });
-
+      const block = this.blockRepository.create({ ...blockData });
       const savedBlock = await this.blockRepository.save(block);
 
-      for (const txid of blockData.tx) {
-        //skip genesis block and the two duplicates
-        if (
-          txid ===
-            '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b' ||
-          txid ===
-            'e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468' ||
-          txid ===
-            'd5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599'
-        ) {
-          continue;
-        }
+      const transactions = await Promise.all(
+        blockData.tx.map((txid) =>
+          this.bitcoinService.getRawTransaction(txid).catch((error) => {
+            console.error(
+              `Failed to fetch transaction ${txid}:`,
+              error.message,
+            );
+            throw error;
+          }),
+        ),
+      );
+      const filteredTransactions = transactions.filter(
+        (tx) => !this.skipTransaction(tx.txid),
+      );
 
-        const transactionData =
-          await this.bitcoinService.getRawTransaction(txid);
-
-        const transaction = await this.transactionRepository.create({
-          ...transactionData,
-          block: savedBlock,
-        });
-
-        const savedTransaction =
-          await this.transactionRepository.save(transaction);
-
-        // Import transaction inputs
-        for (const vin of transactionData.vin) {
-          const input = this.transactionInputRepository.create({
-            transaction: savedTransaction,
-            txid: vin.txid ? vin.txid : null,
-            vout: vin.vout ? vin.vout : null,
-            scriptSigAsm: vin.scriptSig ? vin.scriptSig.asm : null,
-            scriptSigHex: vin.scriptSig ? vin.scriptSig.hex : null,
-            sequence: vin.sequence,
-            coinbase: vin.coinbase ? vin.coinbase : null,
-          });
-          await this.transactionInputRepository.save(input);
-        }
-
-        for (const vout of transactionData.vout) {
-          let address = this.bitcoinService.getAddressFromScriptPubKey(
-            vout.scriptPubKey,
-          );
-
-          const output = await this.transactionOutputRepository.create({
-            transaction: savedTransaction,
-            value: vout.value,
-            n: vout.n,
-            scriptPubKeyAsm: vout.scriptPubKey.asm,
-            scriptPubKeyHex: vout.scriptPubKey.hex,
-            scriptPubKeyType: vout.scriptPubKey.type,
-            scriptPubKeyDesc: vout.scriptPubKey.desc
-              ? vout.scriptPubKey.desc
-              : null,
-            scriptPubKeyAddress: address, // Use the extracted address or public key
-          });
-
-          await this.transactionOutputRepository.save(output);
-        }
+      const transactionEntities = filteredTransactions.map((tx) =>
+        this.transactionRepository.create({ ...tx, block: savedBlock }),
+      );
+      // Use chunkArray to save transactions in batches
+      for (const chunk of this.chunkArray(transactionEntities, 500)) {
+        await this.transactionRepository.save(chunk);
       }
-      console.log(`Imported block ${height}...`);
+
+      const inputs = [];
+      const outputs = [];
+
+      for (const [index, tx] of filteredTransactions.entries()) {
+        const { vin, vout } = tx;
+        inputs.push(
+          ...vin.map((input) =>
+            this.mapInputToEntity(input, transactionEntities[index]),
+          ),
+        ); // Assume mapInputToEntity is implemented
+        outputs.push(
+          ...vout.map((output) =>
+            this.mapOutputToEntity(output, transactionEntities[index]),
+          ),
+        ); // Assume mapOutputToEntity is implemented
+      }
+
+      // Batch save inputs
+      for (const chunk of this.chunkArray(inputs, 500)) {
+        await this.transactionInputRepository.save(chunk);
+      }
+
+      // Batch save outputs
+      for (const chunk of this.chunkArray(outputs, 500)) {
+        await this.transactionOutputRepository.save(chunk);
+      }
+
+      console.timeEnd(`Block ${height} import time`);
+      console.log(
+        `Block ${height} imported with ${filteredTransactions.length} transactions.`,
+      );
     }
     console.log('Import complete!');
+  }
+
+  private mapInputToEntity(input, savedTransaction): TransactionInputEntity {
+    return this.transactionInputRepository.create({
+      txid: input.txid || null,
+      vout: input.vout || null,
+      scriptSigAsm: input.scriptSig ? input.scriptSig.asm : null,
+      scriptSigHex: input.scriptSig ? input.scriptSig.hex : null,
+      sequence: input.sequence,
+      coinbase: input.coinbase || null,
+      transaction: savedTransaction,
+    });
+  }
+
+  private mapOutputToEntity(output, savedTransaction): TransactionOutputEntity {
+    let address = this.bitcoinService.getAddressFromScriptPubKey(
+      output.scriptPubKey,
+    ); // Assuming this function exists and correctly extracts the address
+
+    return this.transactionOutputRepository.create({
+      value: output.value,
+      n: output.n,
+      scriptPubKeyAsm: output.scriptPubKey.asm,
+      scriptPubKeyHex: output.scriptPubKey.hex,
+      scriptPubKeyType: output.scriptPubKey.type,
+      scriptPubKeyDesc: output.scriptPubKey.desc || null,
+      scriptPubKeyAddress: address,
+      transaction: savedTransaction,
+    });
+  }
+
+  private skipTransaction(txid: string): boolean {
+    const skippedTxIds = [
+      '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b', // Genesis block
+      'e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468', // Duplicate 1
+      'd5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599', // Duplicate 2
+    ];
+    return skippedTxIds.includes(txid);
   }
 
   async importExchangeRates() {
@@ -154,5 +184,13 @@ export class ImportService {
 
         console.log('Import completed successfully.');
       });
+  }
+
+  chunkArray<T>(array: T[], chunkSize: number): T[][] {
+    const result = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      result.push(array.slice(i, i + chunkSize));
+    }
+    return result;
   }
 }
