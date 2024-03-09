@@ -99,21 +99,38 @@ export class BitcoindService {
       },
       data: {
         jsonrpc: '1.0',
-        id: method, // Using the method name as the id for simplicity
+        id: method,
         method: method,
         params: params,
       },
     };
 
-    try {
-      const response = await axios(config);
-      if (response.data.error) {
-        console.log(`RPC Error: ${response.data.error.message}`);
+    // Function to delay execution
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await axios(config);
+        if (response.data.error) {
+          console.log(`RPC Error: ${response.data.error.message}`);
+          // If it's the last attempt, throw the error to be caught by the catch block
+          if (attempt === 3) throw new Error(response.data.error.message);
+        }
+        return response.data.result; // Automatically extract the result
+      } catch (error) {
+        console.error(`${method} Error:`, error.message);
+        console.log(
+          `Attempt ${attempt} failed to execute ${method}: ${error.message}`,
+        );
+        if (attempt < 3) {
+          console.log(`Retrying in 1 second...`);
+          await delay(10000); // Wait for 1 second before retrying
+        } else {
+          // If all attempts fail, rethrow the error to handle it or let it propagate
+          throw error;
+        }
       }
-      return response.data.result; // Automatically extract the result
-    } catch (error) {
-      console.error(`${method} Error:`, error.message);
-      console.log(`Failed to execute ${method}: ${error.message}`);
     }
   }
 

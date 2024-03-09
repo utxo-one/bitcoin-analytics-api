@@ -54,60 +54,69 @@ export class ImportService {
       const block = this.blockRepository.create({ ...blockData });
       const savedBlock = await this.blockRepository.save(block);
 
-      const transactions = await Promise.all(
-        blockData.tx.map((txid) =>
-          this.bitcoinService.getRawTransaction(txid).catch((error) => {
-            console.error(
-              `Failed to fetch transaction ${txid}:`,
-              error.message,
-            );
-            throw error;
-          }),
-        ),
-      );
-      const filteredTransactions = transactions.filter(
-        (tx) => !this.skipTransaction(tx.txid),
-      );
-
-      const transactionEntities = filteredTransactions.map((tx) =>
-        this.transactionRepository.create({ ...tx, block: savedBlock }),
-      );
-      // Use chunkArray to save transactions in batches
-      for (const chunk of this.chunkArray(transactionEntities, 500)) {
-        await this.transactionRepository.save(chunk);
-      }
-
-      const inputs = [];
-      const outputs = [];
-
-      for (const [index, tx] of filteredTransactions.entries()) {
-        const { vin, vout } = tx;
-        inputs.push(
-          ...vin.map((input) =>
-            this.mapInputToEntity(input, transactionEntities[index]),
+      // Process transactions in chunks of 500
+      for (let i = 0; i < blockData.tx.length; i += 500) {
+        const txChunk = blockData.tx
+          .slice(i, i + 500)
+          .filter((txid) => !this.skipTransaction(txid));
+        const transactions = await Promise.all(
+          txChunk.map((txid) =>
+            this.bitcoinService.getRawTransaction(txid).catch((error) => {
+              console.error(
+                `Failed to fetch transaction ${txid}:`,
+                error.message,
+              );
+              // Instead of throwing an error, return null or a dummy transaction
+              // to keep the chunk processing going
+              return null;
+            }),
           ),
-        ); // Assume mapInputToEntity is implemented
-        outputs.push(
-          ...vout.map((output) =>
-            this.mapOutputToEntity(output, transactionEntities[index]),
-          ),
-        ); // Assume mapOutputToEntity is implemented
-      }
+        ).then((results) => results.filter((tx) => tx !== null)); // Filter out nulls or dummies
 
-      // Batch save inputs
-      for (const chunk of this.chunkArray(inputs, 500)) {
-        await this.transactionInputRepository.save(chunk);
-      }
+        const filteredTransactions = transactions.filter(
+          (tx) => !this.skipTransaction(tx.txid),
+        );
 
-      // Batch save outputs
-      for (const chunk of this.chunkArray(outputs, 500)) {
-        await this.transactionOutputRepository.save(chunk);
+        const transactionEntities = filteredTransactions.map((tx) =>
+          this.transactionRepository.create({ ...tx, block: savedBlock }),
+        );
+
+        await this.transactionRepository.save(transactionEntities.flat());
+
+        const inputs = [];
+        const outputs = [];
+
+        for (const [index, tx] of filteredTransactions.entries()) {
+          const { vin, vout } = tx;
+          inputs.push(
+            ...vin.map((input) =>
+              this.mapInputToEntity(input, transactionEntities[index]),
+            ),
+          );
+          outputs.push(
+            ...vout.map((output) =>
+              this.mapOutputToEntity(output, transactionEntities[index]),
+            ),
+          );
+        }
+
+        // Batch save inputs
+        for (const chunk of this.chunkArray(inputs, 500)) {
+          await this.transactionInputRepository.save(chunk);
+        }
+
+        // Batch save outputs
+        for (const chunk of this.chunkArray(outputs, 500)) {
+          await this.transactionOutputRepository.save(chunk);
+        }
+
+        console.log(
+          `Processed chunk with ${transactionEntities.length} transactions.`,
+        );
       }
 
       console.timeEnd(`Block ${height} import time`);
-      console.log(
-        `Block ${height} imported with ${filteredTransactions.length} transactions.`,
-      );
+      console.log(`Block ${height} imported.`);
     }
     console.log('Import complete!');
   }
