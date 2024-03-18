@@ -1,0 +1,16 @@
+version: '3.1'
+
+services:
+  mysql:
+    user: "1000:1000"
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password # Replace 'yourpassword' with your desired root password
+      MYSQL_DATABASE: bitcoin_analytics     # Optional: Specify a database to be created on image startup
+      MYSQL_USER: utxo             # Optional: Specify a user to be created on image startup
+      MYSQL_PASSWORD: password # Optional: Specify the user's password
+    ports:
+      - "6603:3306" # Maps port 6603 on the host to port 3306 in the container
+    volumes:
+      - /mnt/dev/docker/bitcoin-analytics/mysql:/var/lib/mysql # Persistent data volume

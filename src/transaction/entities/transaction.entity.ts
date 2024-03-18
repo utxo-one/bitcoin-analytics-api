@@ -24,7 +24,7 @@ export class TransactionEntity {
   @Column()
   hash: string;
 
-  @Column()
+  @Column('bigint')
   version: number;
 
   @Column()

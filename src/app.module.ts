@@ -14,6 +14,7 @@ import { ImportModule } from './import/import.module';
 
 import { TransactionModule } from './transaction/transaction.module';
 import { BlockModule } from './block/block.module';
+import { AddressModule } from './address/address.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { BlockModule } from './block/block.module';
     ImportModule,
     BlockModule,
     TransactionModule,
+    AddressModule,
   ],
   controllers: [AppController],
   providers: [AppService],

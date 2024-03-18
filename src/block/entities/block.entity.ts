@@ -19,9 +19,6 @@ export class BlockEntity {
   hash: string;
 
   @Column()
-  confirmations: number;
-
-  @Column()
   size: number;
 
   @Column()
