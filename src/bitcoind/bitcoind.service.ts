@@ -13,10 +13,15 @@ import {
 } from './bitcoind.types';
 
 import * as BitcoinLib from 'bitcoinjs-lib';
+import { DataSource, getManager } from 'typeorm';
+import { raw } from 'mysql2';
 
 @Injectable()
 export class BitcoindService {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private dataSource: DataSource,
+  ) {}
 
   private rpcUser = this.configService.get<string>('NODE_USERNAME');
   private rpcPassword = this.configService.get<string>('NODE_PASSWORD');
@@ -125,7 +130,7 @@ export class BitcoindService {
         );
         if (attempt < 3) {
           console.log(`Retrying in 1 second...`);
-          await delay(10000); // Wait for 1 second before retrying
+          await delay(1); // Wait for 1 second before retrying
         } else {
           // If all attempts fail, rethrow the error to handle it or let it propagate
           throw error;
@@ -141,5 +146,66 @@ export class BitcoindService {
       BitcoinLib.networks.bitcoin.pubKeyHash,
     );
     return address;
+  }
+
+  async getAddressSummary(address): Promise<any> {
+    const query = `
+WITH Received AS (
+    SELECT
+        SUM(value) AS total_received
+    FROM
+        transaction_outputs
+    WHERE
+        scriptPubKeyAddress = ?
+),
+Spent AS (
+    SELECT
+        SUM(transaction_outputs.value) AS total_spent
+    FROM
+        transaction_inputs
+    JOIN transaction_outputs ON transaction_inputs.transactionId = transaction_outputs.transactionId
+            AND transaction_inputs.vout = transaction_outputs.n
+    WHERE
+        transaction_outputs.scriptPubKeyAddress = ?
+),
+Balance AS (
+    SELECT
+        (COALESCE(Received.total_received, 0) - COALESCE(Spent.total_spent, 0)) AS balance
+    FROM
+        Received, Spent
+)
+SELECT
+    transaction_outputs.scriptPubKeyAddress AS address,
+    Balance.balance,
+    transaction_outputs.transactionId AS transactionId
+FROM
+    transaction_outputs
+JOIN Balance ON 1=1
+WHERE
+    transaction_outputs.scriptPubKeyAddress = ?
+UNION
+SELECT
+    transaction_outputs.scriptPubKeyAddress AS address,
+    Balance.balance,
+    transaction_inputs.txid AS transactionId
+FROM
+    transaction_inputs
+JOIN transaction_outputs ON transaction_inputs.transactionId = transaction_outputs.transactionId
+        AND transaction_inputs.vout = transaction_outputs.n
+JOIN Balance ON 1=1
+WHERE
+    transaction_outputs.scriptPubKeyAddress = ?
+`;
+
+    const parameters = [
+      address.address,
+      address.address,
+      address.address,
+      address.address,
+    ];
+
+    const rawResults = await this.dataSource.query(query, parameters);
+
+    return rawResults;
   }
 }
