@@ -21,9 +21,11 @@ export class TransactionInputEntity {
   transactionId: string;
 
   @Column({ nullable: true })
+  @Index()
   txid: string;
 
   @Column({ nullable: true })
+  @Index()
   vout: number;
 
   @Column({ nullable: true })
