@@ -199,11 +199,15 @@ export class ImportService implements OnApplicationBootstrap {
 
           // Create and save the ExchangeRateEntity
           const exchangeRate = new ExchangeRateEntity();
+          exchangeRate.currency = 'USD';
           exchangeRate.rate = rate;
           exchangeRate.height = blockHeight;
           exchangeRate.block = block;
 
           await this.exchangeRateRepository.save(exchangeRate);
+          console.log(
+            `Imported exchange rate ${rate} for block ${blockHeight}.`,
+          );
         }
 
         console.log('Import completed successfully.');

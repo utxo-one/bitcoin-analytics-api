@@ -54,6 +54,7 @@ export class TransactionEntity {
   // hex: string;
 
   @Column()
+  @Index()
   blockhash: string;
 
   @ManyToOne(() => BlockEntity, (block) => block.transactions)

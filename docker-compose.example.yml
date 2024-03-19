@@ -2,7 +2,6 @@ version: '3.1'
 
 services:
   mysql:
-    user: "1000:1000"
     image: mysql:latest
     restart: always
     environment:
@@ -13,13 +12,18 @@ services:
     ports:
       - "6603:3306"
     volumes:
-      - /mnt/dev/docker/bitcoin-analytics/mysql:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
 
   redis:
-    user: "1000:1000"
     image: redis:latest
     restart: always
     ports:
-      - "7936:6379" # Maps default Redis port 6379 on the host to port 6379 in the container
+      - "7936:6379"
     volumes:
-      - /mnt/dev/docker/bitcoin-analytics/redis:/data # Optional: Persistent data volume
+      - redis-data:/data
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
