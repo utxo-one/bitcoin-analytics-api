@@ -58,10 +58,12 @@ This guide outlines the setup process for the Bitcoin Analytics App, a NestJS-ba
   ```
   DB_HOST=localhost
   DB_PORT=3306
-  DB_USERNAME=<your-mysql-username>
-  DB_PASSWORD=<your-mysql-password>
-  DB_DATABASE=bitcoin_analytics
+  DB_USER=admin
+  DB_PASSWORD=password
+  DB_NAME=bitcoin_analytics
   NODE_RPC_URL=http://<your-rpc-user>:<your-rpc-password>@localhost:8332/
+  IMPORTBLOCKS=true
+  IMPORTEXCHANGERATES=true
   ```
 
 ### 5. Starting the App
@@ -71,7 +73,7 @@ This guide outlines the setup process for the Bitcoin Analytics App, a NestJS-ba
   npm run start
   ```
   This will start the NestJS server, and the application will begin to import data from your configured Bitcoin Core node into the MySQL database.
-
+ NOTE: if the `IMPORT` environment variable is set to true the application 
 ## Note
 
 Ensure that your Bitcoin Core node is fully synchronized with the blockchain before starting the import process. Depending on the blockchain size and your system's specifications, synchronization and data import might take some time.
