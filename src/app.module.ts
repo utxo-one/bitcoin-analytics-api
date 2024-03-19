@@ -10,12 +10,15 @@ import { ImportModule } from './import/import.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { BlockModule } from './block/block.module';
 import { AddressModule } from './address/address.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { RedisOptions } from './config/redis.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    CacheModule.registerAsync(RedisOptions),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,

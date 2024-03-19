@@ -1,16 +1,17 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { AddressService } from './address.service';
-import { BitcoindService } from 'src/bitcoind/bitcoind.service';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { Body, UseInterceptors } from '@nestjs/common/decorators';
 
 @Controller('address')
+@UseInterceptors(CacheInterceptor)
 export class AddressController {
-  constructor(
-    private readonly addressService: AddressService,
-    private readonly bitcoinService: BitcoindService,
-  ) {}
+  constructor(private readonly addressService: AddressService) {}
 
   @Get('/:address')
+  @CacheKey('address')
+  @CacheTTL(30)
   async getAddress(@Param() address: string) {
-    return this.bitcoinService.getAddressSummary(address);
+    return this.addressService.getAddressSummary(address);
   }
 }
