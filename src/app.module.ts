@@ -1,17 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BlockEntity } from './block/entities/block.entity';
-
 import { BitcoindModule } from './bitcoind/bitcoin.module';
 import { DataSource } from 'typeorm';
-import { ImportService } from './import/import.service';
 import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
 import { ImportModule } from './import/import.module';
-
 import { TransactionModule } from './transaction/transaction.module';
 import { BlockModule } from './block/block.module';
 

@@ -1,22 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import * as BitcoinLib from 'bitcoinjs-lib';
 import { ExchangeRateEntity } from '../exchange-rate/entities/exchange-rate.entity';
 import * as fs from 'fs';
 import * as csvParser from 'csv-parser';
 import { BitcoindService } from 'src/bitcoind/bitcoind.service';
-import { bitcoin } from 'bitcoinjs-lib/src/networks';
 import { BlockEntity } from 'src/block/entities/block.entity';
 import { TransactionEntity } from 'src/transaction/entities/transaction.entity';
 import { TransactionInputEntity } from 'src/transaction/entities/transaction-input.entity';
 import { TransactionOutputEntity } from 'src/transaction/entities/transaction-output.entity';
 
 @Injectable()
-export class ImportService {
+export class ImportService implements OnApplicationBootstrap {
   constructor(
     private configService: ConfigService,
     @InjectRepository(BlockEntity)
@@ -31,6 +29,15 @@ export class ImportService {
     private exchangeRateRepository: Repository<ExchangeRateEntity>,
     private bitcoinService: BitcoindService,
   ) {}
+  async onApplicationBootstrap() {
+    if (process.env.IMPORTBLOCKS === 'true') {
+      this.importBlockchainData();
+      //this.importExchangeRates();
+    }
+    if (process.env.IMPORTEXCHANGERATES === 'true') {
+      this.importExchangeRates();
+    }
+  }
 
   async importBlockchainData(): Promise<void> {
     const latestBlockEntity = await this.blockRepository.find({
@@ -134,7 +141,7 @@ export class ImportService {
   }
 
   private mapOutputToEntity(output, savedTransaction): TransactionOutputEntity {
-    let address = this.bitcoinService.getAddressFromScriptPubKey(
+    const address = this.bitcoinService.getAddressFromScriptPubKey(
       output.scriptPubKey,
     ); // Assuming this function exists and correctly extracts the address
 
@@ -176,14 +183,22 @@ export class ImportService {
             where: { height: blockHeight },
           });
 
-          if (!block) {
-            console.warn(`Block with height ${blockHeight} not found.`);
+          const existingExchangeRate =
+            await this.exchangeRateRepository.findOne({
+              where: { height: blockHeight },
+            });
+          if (!block || existingExchangeRate) {
+            if (!block)
+              console.warn(`Block with height ${blockHeight} not found.`);
+            if (existingExchangeRate)
+              console.warn(
+                `Exchange rate for block ${blockHeight} already exists.`,
+              );
             continue; // Skip this record if the block was not found
           }
 
           // Create and save the ExchangeRateEntity
           const exchangeRate = new ExchangeRateEntity();
-          exchangeRate.currency = 'USD';
           exchangeRate.rate = rate;
           exchangeRate.height = blockHeight;
           exchangeRate.block = block;
