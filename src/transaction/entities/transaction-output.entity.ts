@@ -24,6 +24,7 @@ export class TransactionOutputEntity {
   value: number;
 
   @Column()
+  @Index()
   n: number;
 
   @Column('text')
