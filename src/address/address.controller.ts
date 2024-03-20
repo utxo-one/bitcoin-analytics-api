@@ -1,7 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { AddressService } from './address.service';
-import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
-import { Body, UseInterceptors } from '@nestjs/common/decorators';
+import { UseInterceptors } from '@nestjs/common/decorators';
 import { AddressCacheInterceptor } from './address.cache.interceptor';
 
 @Controller('address')
