@@ -9,4 +9,14 @@ export class LightningController {
   async getInfo() {
     return this.lndService.getInfo();
   }
+
+  @Get('channels')
+  async getChannels() {
+    return this.lndService.getAllChannels();
+  }
+
+  @Get('graph')
+  async getGraph() {
+    return this.lndService.subscrbeToChannelGraph();
+  }
 }

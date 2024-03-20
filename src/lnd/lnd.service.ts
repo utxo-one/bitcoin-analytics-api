@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { authenticatedLndGrpc, getWalletInfo } from 'ln-service';
+import {
+  authenticatedLndGrpc,
+  getWalletInfo,
+  getChannels,
+  subscribeToGraph,
+} from 'ln-service';
 
 @Injectable()
 export class LndService {
@@ -19,5 +24,13 @@ export class LndService {
       lnd: this.lnd,
     });
     return nodePublicKey;
+  }
+
+  async getAllChannels() {
+    return await getChannels({ lnd: this.lnd });
+  }
+
+  async subscrbeToChannelGraph() {
+    return await subscribeToGraph({ lnd: this.lnd });
   }
 }
