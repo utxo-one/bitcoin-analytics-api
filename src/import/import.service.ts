@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +12,8 @@ import { BlockEntity } from 'src/block/entities/block.entity';
 import { TransactionEntity } from 'src/transaction/entities/transaction.entity';
 import { TransactionInputEntity } from 'src/transaction/entities/transaction-input.entity';
 import { TransactionOutputEntity } from 'src/transaction/entities/transaction-output.entity';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 @Injectable()
 export class ImportService implements OnApplicationBootstrap {
@@ -28,6 +30,7 @@ export class ImportService implements OnApplicationBootstrap {
     @InjectRepository(ExchangeRateEntity)
     private exchangeRateRepository: Repository<ExchangeRateEntity>,
     private bitcoinService: BitcoindService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
   async onApplicationBootstrap() {
     if (process.env.IMPORTBLOCKS === 'true') {
@@ -48,9 +51,8 @@ export class ImportService implements OnApplicationBootstrap {
       ? latestBlockEntity[0].height + 1
       : 0;
     const currentBlockCount = await this.bitcoinService.getBlockCount();
-
-    console.log(`Current block count from network: ${currentBlockCount}`);
-    console.log(`Starting import from block height: ${startHeight}`);
+    this.logger.info(`Current block count from network: ${currentBlockCount}`);
+    this.logger.info(`Starting import from block height: ${startHeight}`);
 
     for (let height = startHeight; height < currentBlockCount; height++) {
       console.time(`Block ${height} import time`);
@@ -69,9 +71,9 @@ export class ImportService implements OnApplicationBootstrap {
         const transactions = await Promise.all(
           txChunk.map((txid) =>
             this.bitcoinService.getRawTransaction(txid).catch((error) => {
-              console.error(
-                `Failed to fetch transaction ${txid}:`,
-                error.message,
+              this.logger.error(
+                `Failed to fetch transaction ${txid}: ${error.message}`,
+                error,
               );
               // Instead of throwing an error, return null or a dummy transaction
               // to keep the chunk processing going
@@ -117,15 +119,13 @@ export class ImportService implements OnApplicationBootstrap {
           await this.transactionOutputRepository.save(chunk);
         }
 
-        console.log(
+        this.logger.info(
           `Processed chunk with ${transactionEntities.length} transactions.`,
         );
       }
-
-      console.timeEnd(`Block ${height} import time`);
-      console.log(`Block ${height} imported.`);
+      this.logger.info(`Block ${height} imported.`);
     }
-    console.log('Import complete!');
+    this.logger.info('Blockchain import complete!');
   }
 
   private mapInputToEntity(input, savedTransaction): TransactionInputEntity {
@@ -205,12 +205,11 @@ export class ImportService implements OnApplicationBootstrap {
           exchangeRate.block = block;
 
           await this.exchangeRateRepository.save(exchangeRate);
-          console.log(
+          this.logger.info(
             `Imported exchange rate ${rate} for block ${blockHeight}.`,
           );
         }
-
-        console.log('Import completed successfully.');
+        this.logger.info('Exchange rate import complete.');
       });
   }
 

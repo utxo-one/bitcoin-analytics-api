@@ -74,6 +74,8 @@ This guide outlines the setup process for the Bitcoin Analytics App, a NestJS-ba
   ```
   This will start the NestJS server, and the application will begin to import data from your configured Bitcoin Core node into the MySQL database.
  NOTE: if the `IMPORT` environment variable is set to true the application 
+
+ Running locally you can now navigate to `http://localhost:3000/api-docs` and open swagger page and openapi docs.
 ## Note
 
 Ensure that your Bitcoin Core node is fully synchronized with the blockchain before starting the import process. Depending on the blockchain size and your system's specifications, synchronization and data import might take some time.

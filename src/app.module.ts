@@ -12,6 +12,8 @@ import { BlockModule } from './block/block.module';
 import { AddressModule } from './address/address.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisOptions } from './config/redis.config';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
 
 @Module({
   imports: [
@@ -30,6 +32,17 @@ import { RedisOptions } from './config/redis.config';
       synchronize: true,
       logging: ['error'],
     }),
+    WinstonModule.forRoot({
+      transports: [
+        new winston.transports.Console({
+          level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.simple(),
+          ),
+        }),
+      ],
+    }),
     BitcoindModule,
     ExchangeRateModule,
     ImportModule,
@@ -40,6 +53,4 @@ import { RedisOptions } from './config/redis.config';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {
-  constructor(private dataSource: DataSource) {}
-}
+export class AppModule {}

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosRequestConfig } from 'axios';
 import {
@@ -13,12 +13,13 @@ import {
 } from './bitcoind.types';
 
 import * as BitcoinLib from 'bitcoinjs-lib';
-import { DataSource, getManager } from 'typeorm';
-import { raw } from 'mysql2';
-
+import { DataSource } from 'typeorm';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 @Injectable()
 export class BitcoindService {
   constructor(
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     private configService: ConfigService,
     private dataSource: DataSource,
   ) {}
@@ -118,18 +119,22 @@ export class BitcoindService {
       try {
         const response = await axios(config);
         if (response.data.error) {
-          console.log(`RPC Error: ${response.data.error.message}`);
+          this.logger.error(
+            `RPC Error: ${response.data.error.message}`,
+            response.data.error,
+          );
           // If it's the last attempt, throw the error to be caught by the catch block
           if (attempt === 3) throw new Error(response.data.error.message);
         }
         return response.data.result; // Automatically extract the result
       } catch (error) {
-        console.error(`${method} Error:`, error.message);
-        console.log(
+        this.logger.error(`${method} Error:`, error);
+        this.logger.warn(
           `Attempt ${attempt} failed to execute ${method}: ${error.message}`,
         );
+
         if (attempt < 3) {
-          console.log(`Retrying in 1 second...`);
+          this.logger.info(`Retrying in 1 second...`);
           await delay(1); // Wait for 1 second before retrying
         } else {
           // If all attempts fail, rethrow the error to handle it or let it propagate
