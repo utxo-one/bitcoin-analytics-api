@@ -4,7 +4,6 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BitcoindModule } from './bitcoind/bitcoin.module';
-import { DataSource } from 'typeorm';
 import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
 import { ImportModule } from './import/import.module';
 import { TransactionModule } from './transaction/transaction.module';
@@ -13,6 +12,8 @@ import { AddressModule } from './address/address.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisOptions } from './config/redis.config';
 import { WinstonModule } from 'nest-winston';
+import { LndModule } from './lnd/lnd.module';
+import { LightningModule } from './lightning/lightning.module';
 import * as winston from 'winston';
 
 @Module({
@@ -49,6 +50,8 @@ import * as winston from 'winston';
     BlockModule,
     TransactionModule,
     AddressModule,
+    LndModule,
+    LightningModule,
   ],
   controllers: [AppController],
   providers: [AppService],
