@@ -24,30 +24,7 @@ export class AddressService {
                         'locktime', t.locktime,
                         'blockId', t.blockId,
                         'time', b.time,
-                        'blocktime', b.time,
-                        'outputs', (
-                            SELECT JSON_ARRAYAGG(
-                                JSON_OBJECT(
-                                    'value', o.value,
-                                    'n', o.n,
-                                    'scriptPubKeyAddress', o.scriptPubKeyAddress
-                                )
-                            )
-                            FROM transaction_outputs o
-                            WHERE o.transactionId = t.id
-                        ),
-                        'inputs', (
-                            SELECT JSON_ARRAYAGG(
-                                JSON_OBJECT(
-                                    'value', prev_o.value,
-                                    'n', prev_o.n,
-                                    'scriptPubKeyAddress', prev_o.scriptPubKeyAddress
-                                )
-                            )
-                            FROM transaction_inputs i
-                            JOIN transaction_outputs prev_o ON i.txid = prev_o.transactionId AND i.vout = prev_o.n
-                            WHERE i.transactionId = t.id AND prev_o.scriptPubKeyAddress = ?
-                        )
+                        'blocktime', b.time
                     )
                 )
                 FROM transactions t
@@ -55,7 +32,7 @@ export class AddressService {
                 WHERE t.id IN (
                     SELECT transactionId FROM transaction_outputs WHERE scriptPubKeyAddress = ?
                     UNION
-                    SELECT i.transactionId FROM transaction_inputs i 
+                    SELECT i.transactionId FROM transaction_inputs i
                     JOIN transaction_outputs o ON i.txid = o.transactionId AND i.vout = o.n
                     WHERE o.scriptPubKeyAddress = ?
                 )
@@ -63,10 +40,11 @@ export class AddressService {
         ) AS summary
     `;
 
-    const parameters = [address, address, address, address];
+    const parameters = [address, address, address];
 
     const rawResults = await this.dataSource.query(query, parameters);
 
     return rawResults.map((row) => row.summary);
-  }
+}
+
 }

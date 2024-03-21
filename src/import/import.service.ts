@@ -14,6 +14,7 @@ import { TransactionInputEntity } from 'src/transaction/entities/transaction-inp
 import { TransactionOutputEntity } from 'src/transaction/entities/transaction-output.entity';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { AddressTransactionEntity } from 'src/transaction/entities/transaction-address.entity';
 
 @Injectable()
 export class ImportService implements OnApplicationBootstrap {
@@ -29,6 +30,8 @@ export class ImportService implements OnApplicationBootstrap {
     private transactionOutputRepository: Repository<TransactionOutputEntity>,
     @InjectRepository(ExchangeRateEntity)
     private exchangeRateRepository: Repository<ExchangeRateEntity>,
+    @InjectRepository(AddressTransactionEntity)
+    private addressTransactionRepository: Repository<AddressTransactionEntity>,
     private bitcoinService: BitcoindService,
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
@@ -44,89 +47,118 @@ export class ImportService implements OnApplicationBootstrap {
 
   async importBlockchainData(): Promise<void> {
     const latestBlockEntity = await this.blockRepository.find({
-      order: { height: 'DESC' },
-      take: 1,
+        order: { height: 'DESC' },
+        take: 1,
     });
-    const startHeight = latestBlockEntity[0]
-      ? latestBlockEntity[0].height + 1
-      : 0;
+    const startHeight = latestBlockEntity[0] ? latestBlockEntity[0].height + 1 : 0;
     const currentBlockCount = await this.bitcoinService.getBlockCount();
     this.logger.info(`Current block count from network: ${currentBlockCount}`);
     this.logger.info(`Starting import from block height: ${startHeight}`);
 
     for (let height = startHeight; height < currentBlockCount; height++) {
-      console.time(`Block ${height} import time`);
+        console.time(`Block ${height} import time`);
 
-      const blockHash = await this.bitcoinService.getBlockHash(height);
-      const blockData = await this.bitcoinService.getBlock(blockHash);
+        const blockHash = await this.bitcoinService.getBlockHash(height);
+        const blockData = await this.bitcoinService.getBlock(blockHash);
 
-      const block = this.blockRepository.create({ ...blockData });
-      const savedBlock = await this.blockRepository.save(block);
+        const block = this.blockRepository.create({ ...blockData });
+        const savedBlock = await this.blockRepository.save(block);
 
-      // Process transactions in chunks of 500
-      for (let i = 0; i < blockData.tx.length; i += 500) {
-        const txChunk = blockData.tx
-          .slice(i, i + 500)
-          .filter((txid) => !this.skipTransaction(txid));
-        const transactions = await Promise.all(
-          txChunk.map((txid) =>
-            this.bitcoinService.getRawTransaction(txid).catch((error) => {
-              this.logger.error(
-                `Failed to fetch transaction ${txid}: ${error.message}`,
-                error,
-              );
-              // Instead of throwing an error, return null or a dummy transaction
-              // to keep the chunk processing going
-              return null;
-            }),
-          ),
-        ).then((results) => results.filter((tx) => tx !== null)); // Filter out nulls or dummies
+        for (let i = 0; i < blockData.tx.length; i += 500) {
+            const txChunk = blockData.tx
+                .slice(i, i + 500)
+                .filter((txid) => !this.skipTransaction(txid));
+            const transactions = await Promise.all(
+                txChunk.map((txid) =>
+                    this.bitcoinService.getRawTransaction(txid).catch((error) => {
+                        this.logger.error(`Failed to fetch transaction ${txid}: ${error.message}`, error);
+                        return null;
+                    }),
+                )
+            ).then((results) => results.filter((tx) => tx !== null));
 
-        const filteredTransactions = transactions.filter(
-          (tx) => !this.skipTransaction(tx.txid),
-        );
+            const filteredTransactions = transactions.filter((tx) => !this.skipTransaction(tx.txid));
+            const transactionEntities = await this.transactionRepository.save(
+                filteredTransactions.map((tx) => this.transactionRepository.create({ ...tx, block: savedBlock })).flat()
+            );
 
-        const transactionEntities = filteredTransactions.map((tx) =>
-          this.transactionRepository.create({ ...tx, block: savedBlock }),
-        );
+            let inputs = [];
+            let outputs = [];
 
-        await this.transactionRepository.save(transactionEntities.flat());
+            for (const [index, tx] of filteredTransactions.entries()) {
+                const { vin, vout } = tx;
 
-        const inputs = [];
-        const outputs = [];
+                for (const input of vin) {
+                    const inputEntity = this.mapInputToEntity(input, transactionEntities[index]);
+                    inputs.push(inputEntity);
 
-        for (const [index, tx] of filteredTransactions.entries()) {
-          const { vin, vout } = tx;
-          inputs.push(
-            ...vin.map((input) =>
-              this.mapInputToEntity(input, transactionEntities[index]),
-            ),
-          );
-          outputs.push(
-            ...vout.map((output) =>
-              this.mapOutputToEntity(output, transactionEntities[index]),
-            ),
-          );
+                    const prevOutput = await this.transactionOutputRepository.findOne({
+                        where: {
+                            transactionId: input.txid,
+                            n: input.vout
+                        }
+                    });
+
+                    if (prevOutput && prevOutput.scriptPubKeyAddress) {
+                        await this.addAddressTransaction(
+                            prevOutput.scriptPubKeyAddress,
+                            transactionEntities[index],
+                            'spend',
+                            savedBlock,
+                            -prevOutput.value,
+                            savedBlock.time
+                        );
+                    }
+                }
+
+                for (const output of vout) {
+                    const outputEntity = this.mapOutputToEntity(output, transactionEntities[index]);
+                    outputs.push(outputEntity);
+
+                    if (outputEntity.scriptPubKeyAddress) {
+                        await this.addAddressTransaction(
+                            outputEntity.scriptPubKeyAddress,
+                            transactionEntities[index],
+                            'receive',
+                            savedBlock,
+                            outputEntity.value,
+                            savedBlock.time
+                        );
+                    }
+                }
+            }
+
+            await this.transactionInputRepository.save(inputs);
+            await this.transactionOutputRepository.save(outputs);
+
+            // Reset the arrays for the next chunk
+            inputs = [];
+            outputs = [];
         }
 
-        // Batch save inputs
-        for (const chunk of this.chunkArray(inputs, 500)) {
-          await this.transactionInputRepository.save(chunk);
-        }
-
-        // Batch save outputs
-        for (const chunk of this.chunkArray(outputs, 500)) {
-          await this.transactionOutputRepository.save(chunk);
-        }
-
-        this.logger.info(
-          `Processed chunk with ${transactionEntities.length} transactions.`,
-        );
-      }
-      this.logger.info(`Block ${height} imported.`);
+        console.timeEnd(`Block ${height} import time`);
+        this.logger.info(`Block ${height} imported.`);
     }
     this.logger.info('Blockchain import complete!');
+}
+
+
+private async getAddressFromInput(input): Promise<string | null> {
+  if (!input.txid || typeof input.vout !== 'number') {
+      return null; // Return null if txid or vout is missing
   }
+
+  // Assuming transactionOutputRepository is available and set up similar to other repositories
+  const outputEntity = await this.transactionOutputRepository.findOne({
+      where: {
+          transactionId: input.txid,
+          n: input.vout
+      }
+  });
+
+  return outputEntity ? outputEntity.scriptPubKeyAddress : null;
+}
+
 
   private mapInputToEntity(input, savedTransaction): TransactionInputEntity {
     return this.transactionInputRepository.create({
@@ -212,6 +244,64 @@ export class ImportService implements OnApplicationBootstrap {
         this.logger.info('Exchange rate import complete.');
       });
   }
+
+  // Inside BlockchainImportService class
+
+  async addAddressTransaction(
+    address: string,
+    transactionEntity: TransactionEntity,
+    type: 'receive' | 'spend',
+    blockEntity: BlockEntity,
+    amount: number,
+    time: number,
+) {
+    // Use a transactional approach to ensure atomicity
+    const queryRunner = this.addressTransactionRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+        let currentBalance = 0;
+
+        // Find the latest transaction for the address to get the current balance within a transaction
+        const latestTransaction = await queryRunner.manager.findOne(AddressTransactionEntity, {
+            where: { address },
+            order: { time: 'DESC' }
+        });
+
+        if (latestTransaction) {
+            currentBalance = parseFloat(latestTransaction.balance.toString());
+        }
+
+        // Update balance based on the transaction type
+        const updatedBalance = type === 'receive'
+            ? currentBalance + amount
+            : currentBalance - amount;
+
+        const addressTransaction = queryRunner.manager.create(AddressTransactionEntity, {
+            address,
+            transaction: transactionEntity,
+            type,
+            block: blockEntity,
+            time,
+            amount,
+            balance: updatedBalance
+        });
+
+        await queryRunner.manager.save(addressTransaction);
+        await queryRunner.commitTransaction();
+    } catch (err) {
+        // Handle errors and rollback transaction
+        await queryRunner.rollbackTransaction();
+        throw err;
+    } finally {
+        // Release the query runner which is manually instantiated
+        await queryRunner.release();
+    }
+}
+
+
+
 
   chunkArray<T>(array: T[], chunkSize: number): T[][] {
     const result = [];
