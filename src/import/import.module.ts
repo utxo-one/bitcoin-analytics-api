@@ -7,6 +7,7 @@ import { TransactionInputEntity } from 'src/transaction/entities/transaction-inp
 import { BlockEntity } from 'src/block/entities/block.entity';
 import { ExchangeRateEntity } from 'src/exchange-rate/entities/exchange-rate.entity';
 import { BitcoindModule } from 'src/bitcoind/bitcoin.module';
+import { AddressTransactionEntity } from 'src/transaction/entities/transaction-address.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { BitcoindModule } from 'src/bitcoind/bitcoin.module';
       TransactionInputEntity,
       BlockEntity,
       ExchangeRateEntity,
+      AddressTransactionEntity,
     ]),
     BitcoindModule,
   ],
