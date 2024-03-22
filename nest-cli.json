@@ -1,8 +1,41 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/bitcoin-analytics-api/src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/bitcoin-analytics-api/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/bitcoin-analytics-api",
+  "projects": {
+    "bitcoin-analytics-api": {
+      "type": "application",
+      "root": "apps/bitcoin-analytics-api",
+      "entryFile": "main",
+      "sourceRoot": "apps/bitcoin-analytics-api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/bitcoin-analytics-api/tsconfig.app.json"
+      }
+    },
+    "lnd-service": {
+      "type": "application",
+      "root": "apps/lnd-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/lnd-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/lnd-service/tsconfig.app.json"
+      }
+    },
+    "entities": {
+      "type": "library",
+      "root": "libs/entities",
+      "entryFile": "index",
+      "sourceRoot": "libs/entities/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/entities/tsconfig.lib.json"
+      }
+    }
   }
 }

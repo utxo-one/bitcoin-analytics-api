@@ -16,6 +16,20 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@app/entities": [
+        "libs/entities/src"
+      ],
+      "@app/entities/*": [
+        "libs/entities/src/*"
+      ],
+      "@app/types": [
+        "libs/types/src"
+      ],
+      "@app/types/*": [
+        "libs/types/src/*"
+      ]
+    }
   }
 }
