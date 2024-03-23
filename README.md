@@ -66,16 +66,26 @@ This guide outlines the setup process for the Bitcoin Analytics App, a NestJS-ba
   IMPORTEXCHANGERATES=true
   ```
 
-### 5. Starting the App
+### 5. Starting the Rest API
 
 - **Run the Application**: With your environment configured, you can start the application by running:
   ```bash
-  npm run start
+  npm run dev:api
   ```
   This will start the NestJS server, and the application will begin to import data from your configured Bitcoin Core node into the MySQL database.
  NOTE: if the `IMPORT` environment variable is set to true the application 
 
  Running locally you can now navigate to `http://localhost:3000/api-docs` and open swagger page and openapi docs.
+
+ ### 6. Starting the Lnd Service
+
+- **Run the Application**: With your environment configured, you can start the application by running:
+  ```bash
+  npm run dev:lnd
+  ```
+  This will start the NestJS server, and the application will begin connect to the configured lnd node. 
+  This service will be used to collect graph information about the lightning network. 
+
 ## Note
 
 Ensure that your Bitcoin Core node is fully synchronized with the blockchain before starting the import process. Depending on the blockchain size and your system's specifications, synchronization and data import might take some time.
