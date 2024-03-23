@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { BlockEntity } from '../../../../libs/entities/src/block/block.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { BlockEntity } from '@app/entities/block/block.entity';
 
 @Injectable()
 export class BlockService {

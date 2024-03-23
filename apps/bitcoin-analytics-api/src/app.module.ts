@@ -11,7 +11,6 @@ import { BlockModule } from './block/block.module';
 import { AddressModule } from './address/address.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisOptions } from './config/redis.config';
-
 import { LndModule } from './lnd/lnd.module';
 import { LightningModule } from './lightning/lightning.module';
 import { WinstonModule } from 'nest-winston';

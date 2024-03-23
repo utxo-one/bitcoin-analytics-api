@@ -6,7 +6,7 @@ import { BlockEntity } from '@app/entities/block/block.entity';
 import { TransactionEntity } from '@app/entities/transaction/transaction.entity';
 import { TransactionInputEntity } from '@app/entities/transaction/transaction-input.entity';
 import { TransactionOutputEntity } from '@app/entities/transaction/transaction-output.entity';
-import { ExchangeRateEntity } from '../../../../libs/entities/src/exchange-rate/exchange-rate.entity';
+import { ExchangeRateEntity } from '@app/entities/exchange-rate/exchange-rate.entity';
 
 @Module({
   imports: [

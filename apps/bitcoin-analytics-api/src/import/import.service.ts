@@ -4,17 +4,19 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { ExchangeRateEntity } from '../../../../libs/entities/src/exchange-rate/exchange-rate.entity';
 import * as fs from 'fs';
 import * as csvParser from 'csv-parser';
 
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+
 import { BlockEntity } from '@app/entities/block/block.entity';
 import { TransactionEntity } from '@app/entities/transaction/transaction.entity';
 import { TransactionInputEntity } from '@app/entities/transaction/transaction-input.entity';
 import { TransactionOutputEntity } from '@app/entities/transaction/transaction-output.entity';
 import { AddressTransactionEntity } from '@app/entities/transaction/transaction-address.entity';
+import { ExchangeRateEntity } from '@app/entities/exchange-rate/exchange-rate.entity';
+
 import { BitcoindService } from '../bitcoind/bitcoind.service';
 
 @Injectable()

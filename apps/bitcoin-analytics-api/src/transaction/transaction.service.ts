@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TransactionEntity } from '../../../../libs/entities/src/transaction/transaction.entity';
+import { TransactionEntity } from '@app/entities/transaction/transaction.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
