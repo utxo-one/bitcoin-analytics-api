@@ -23,12 +23,6 @@
       ],
       "@app/entities/*": [
         "libs/entities/src/*"
-      ],
-      "@app/types": [
-        "libs/types/src"
-      ],
-      "@app/types/*": [
-        "libs/types/src/*"
       ]
     }
   }

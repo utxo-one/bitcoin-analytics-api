@@ -45,6 +45,5 @@ export class AddressService {
     const rawResults = await this.dataSource.query(query, parameters);
 
     return rawResults.map((row) => row.summary);
-}
-
+  }
 }
