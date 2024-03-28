@@ -100,6 +100,7 @@ export class LndService implements OnApplicationBootstrap {
         | 'updated_at'
         | 'announcing_public_key'
         | 'target_public_key'
+        | 'open_height'
       > = {
         channel_id: channel.id,
         base_fee_mtokens: isChannelUpdated(channel)
@@ -130,7 +131,10 @@ export class LndService implements OnApplicationBootstrap {
     } else {
       this.logger.info('Adding new channel event:', channel);
       //possible edge case where we receive a channel_closed event before a channel_updated event so we should check if the channel is closed
-      const newChannel: Omit<LnChannel, 'id' | 'created_at' | 'updated_at'> = {
+      const newChannel: Omit<
+        LnChannel,
+        'id' | 'created_at' | 'updated_at' | 'open_height'
+      > = {
         channel_id: channel.id,
         announcing_public_key: isChannelUpdated(channel)
           ? channel.public_keys[0]

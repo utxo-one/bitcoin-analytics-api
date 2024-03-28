@@ -20,6 +20,9 @@ export class LnChannel {
   capacity: number;
 
   @Column({ nullable: true })
+  open_height: number;
+
+  @Column({ nullable: true })
   close_height: number;
 
   @Column({ nullable: true })
