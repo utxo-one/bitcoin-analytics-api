@@ -4,6 +4,7 @@ import {
   Column,
   UpdateDateColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('ln_channels')
@@ -12,6 +13,7 @@ export class LnChannel {
   id: string;
 
   @Column({ nullable: false })
+  @Index('idx_ln_channel_channel_id', { unique: true })
   channel_id: string;
 
   @Column({ nullable: true })
