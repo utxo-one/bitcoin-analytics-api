@@ -31,6 +31,7 @@
     "@nestjs/typeorm": "^10.0.2",
     "axios": "^1.6.7",
     "bitcoinjs-lib": "^6.1.5",
+    "bullmq": "^5.4.6",
     "cache-manager": "^5.4.0",
     "cache-manager-redis-store": "^3.0.1",
     "csv-parser": "^3.0.0",
