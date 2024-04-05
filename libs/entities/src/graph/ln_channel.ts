@@ -5,6 +5,8 @@ import {
   UpdateDateColumn,
   CreateDateColumn,
   Index,
+  OneToMany,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity('ln_channels')
@@ -28,8 +30,27 @@ export class LnChannel {
   @Column({ nullable: true })
   transaction_id: string;
 
-  @Column({ nullable: true })
+  @Column()
   transaction_vout: number;
+
+  @OneToMany(() => LnPolicy, (policy) => policy.id)
+  policies: LnPolicy[];
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updated_at: Date;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at: Date;
+}
+
+//ln_policies table
+@Entity('ln_policies')
+export class LnPolicy {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ nullable: false })
+  channel_id: string;
 
   @Column({ nullable: true })
   base_fee_mtokens: string;
@@ -49,12 +70,16 @@ export class LnChannel {
   @Column({ nullable: true })
   min_htlc_mtokens: string;
 
-  @Column({ nullable: true })
-  announcing_public_key: string;
+  @Column()
+  public_key: string;
+
+  @ManyToOne(() => LnChannel, (channel) => channel.id, {
+    eager: false,
+    nullable: false,
+  })
+  channel: LnChannel;
 
   @Column({ nullable: true })
-  target_public_key: string;
-
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 
