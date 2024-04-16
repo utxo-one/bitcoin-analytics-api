@@ -1,4 +1,4 @@
-export interface Snapshot {
+export interface SnapshotType {
   average_channel_size: number;
   channel_count: number;
   max_channel_size: number;

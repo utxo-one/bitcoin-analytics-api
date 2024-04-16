@@ -2,8 +2,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('snapshots')
@@ -12,26 +12,30 @@ export class Snapshot {
   id: string;
 
   @Column({ nullable: false })
-  snapshot_id: string;
+  average_channel_size: number;
 
   @Column({ nullable: false })
-  snapshot_height: number;
+  channel_count: number;
 
   @Column({ nullable: false })
-  snapshot_hash: string;
+  max_channel_size: number;
 
   @Column({ nullable: false })
-  snapshot_timestamp: number;
+  median_channel_size: number;
 
   @Column({ nullable: false })
-  snapshot_type: string;
+  min_channel_size: number;
 
   @Column({ nullable: false })
-  snapshot_data: string;
+  node_count: number;
 
-  @UpdateDateColumn({ type: 'timestamp' })
-  updated_at: Date;
+  @Column({ nullable: false })
+  not_recently_updated_policy_count: number;
+
+  @Column({ nullable: false })
+  total_capacity: number;
 
   @CreateDateColumn({ type: 'timestamp' })
+  @Index('idx_snapshot_created_at')
   created_at: Date;
 }
