@@ -1,14 +1,15 @@
 import { Module } from '@nestjs/common';
-import { LndServiceService } from './lnd-service.service';
-import { LndModule } from './lnd/lnd.module';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { LndModule } from './lnd/lnd.module';
+import { SnapshotModule } from './snapshot/snapshot.module';
+import { LndServiceService } from './lnd-service.service';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
-    LndModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -34,6 +35,9 @@ import { ConfigModule } from '@nestjs/config';
         }),
       ],
     }),
+    ScheduleModule.forRoot(),
+    LndModule,
+    SnapshotModule,
   ],
   providers: [LndServiceService],
 })
