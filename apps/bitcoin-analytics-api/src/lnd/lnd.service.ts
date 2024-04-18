@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { authenticatedLndGrpc, getWalletInfo } from 'ln-service';
+import { authenticatedLndGrpc, getWalletInfo } from 'lightning';
 
 @Injectable()
 export class LndService {

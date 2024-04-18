@@ -13,8 +13,8 @@ import { TransactionDetail } from 'apps/bitcoin-analytics-api/src/bitcoind/bitco
 
 @Entity('transactions')
 export class TransactionEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   @Index({ unique: true })

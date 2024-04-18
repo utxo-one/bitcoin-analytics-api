@@ -62,7 +62,14 @@ export class ImportService implements OnApplicationBootstrap {
 
     for (let height = startHeight; height < currentBlockCount; height++) {
       console.time(`Block ${height} import time`);
+      const existingBlock = await this.blockRepository.findOne({
+        where: { height },
+      });
 
+      if (existingBlock) {
+        this.logger.warn(`Block ${height} already exists in the database.`);
+        continue;
+      }
       const blockHash = await this.bitcoinService.getBlockHash(height);
       const blockData = await this.bitcoinService.getBlock(blockHash);
 
@@ -85,9 +92,26 @@ export class ImportService implements OnApplicationBootstrap {
           ),
         ).then((results) => results.filter((tx) => tx !== null));
 
-        const filteredTransactions = transactions.filter(
+        let filteredTransactions = transactions.filter(
           (tx) => !this.skipTransaction(tx.txid),
         );
+        const existingTransactions = await this.transactionRepository.find({
+          where: filteredTransactions.map((tx) => ({ txid: tx.txid })),
+        });
+
+        if (existingTransactions.length > 0) {
+          this.logger.warn(
+            `Some transactions from block ${height} already exist in the database.`,
+          );
+
+          // Filter out the existing transactions
+          filteredTransactions = filteredTransactions.filter(
+            (tx) =>
+              !existingTransactions.some(
+                (existingTx) => existingTx.txid === tx.txid,
+              ),
+          );
+        }
         const transactionEntities = await this.transactionRepository.save(
           filteredTransactions
             .map((tx) =>
@@ -160,22 +184,6 @@ export class ImportService implements OnApplicationBootstrap {
       this.logger.info(`Block ${height} imported.`);
     }
     this.logger.info('Blockchain import complete!');
-  }
-
-  private async getAddressFromInput(input): Promise<string | null> {
-    if (!input.txid || typeof input.vout !== 'number') {
-      return null; // Return null if txid or vout is missing
-    }
-
-    // Assuming transactionOutputRepository is available and set up similar to other repositories
-    const outputEntity = await this.transactionOutputRepository.findOne({
-      where: {
-        transactionId: input.txid,
-        n: input.vout,
-      },
-    });
-
-    return outputEntity ? outputEntity.scriptPubKeyAddress : null;
   }
 
   private mapInputToEntity(input, savedTransaction): TransactionInputEntity {
@@ -266,7 +274,7 @@ export class ImportService implements OnApplicationBootstrap {
   // Inside BlockchainImportService class
 
   async addAddressTransaction(
-    address: string,
+    address: string | null,
     transactionEntity: TransactionEntity,
     type: 'receive' | 'spend',
     blockEntity: BlockEntity,
@@ -283,16 +291,16 @@ export class ImportService implements OnApplicationBootstrap {
       let currentBalance = 0;
 
       // Find the latest transaction for the address to get the current balance within a transaction
-      const latestTransaction = await queryRunner.manager.findOne(
-        AddressTransactionEntity,
-        {
-          where: { address },
-          order: { time: 'DESC' },
-        },
-      );
+      if (address) {
+        const latestTransaction =
+          await this.addressTransactionRepository.findOne({
+            order: { time: 'DESC' },
+            where: { address },
+          });
 
-      if (latestTransaction) {
-        currentBalance = parseFloat(latestTransaction.balance.toString());
+        if (latestTransaction) {
+          currentBalance = parseFloat(latestTransaction.balance.toString());
+        }
       }
 
       // Update balance based on the transaction type
@@ -322,13 +330,5 @@ export class ImportService implements OnApplicationBootstrap {
       // Release the query runner which is manually instantiated
       await queryRunner.release();
     }
-  }
-
-  chunkArray<T>(array: T[], chunkSize: number): T[][] {
-    const result = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-      result.push(array.slice(i, i + chunkSize));
-    }
-    return result;
   }
 }
