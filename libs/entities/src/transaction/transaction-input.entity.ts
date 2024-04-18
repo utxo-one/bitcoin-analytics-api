@@ -10,8 +10,8 @@ import { TransactionEntity } from './transaction.entity';
 
 @Entity('transaction_inputs')
 export class TransactionInputEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => TransactionEntity, (transaction) => transaction.vin)
   @JoinColumn({ name: 'transactionId' })

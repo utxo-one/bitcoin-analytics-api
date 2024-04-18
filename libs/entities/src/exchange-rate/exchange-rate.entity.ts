@@ -9,8 +9,8 @@ import { BlockEntity } from '../block/block.entity';
 
 @Entity('exchange_rates')
 export class ExchangeRateEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   currency: string;

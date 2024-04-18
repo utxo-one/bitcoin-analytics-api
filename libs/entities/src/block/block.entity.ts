@@ -11,8 +11,8 @@ import { ExchangeRateEntity } from '../exchange-rate/exchange-rate.entity';
 
 @Entity('blocks')
 export class BlockEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   @Index({ unique: true })

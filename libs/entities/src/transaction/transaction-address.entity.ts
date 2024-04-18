@@ -11,8 +11,8 @@ import { BlockEntity } from '../block/block.entity';
 
 @Entity('address_transactions')
 export class AddressTransactionEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ length: 255 })
   @Index()
