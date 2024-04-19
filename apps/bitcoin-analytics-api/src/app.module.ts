@@ -14,6 +14,7 @@ import { RedisOptions } from './config/redis.config';
 import { LndModule } from './lnd/lnd.module';
 import { LightningModule } from './lightning/lightning.module';
 import { WinstonModule } from 'nest-winston';
+import { ElectrumModule } from './electrum/electrum.module';
 import * as winston from 'winston';
 
 @Module({
@@ -52,6 +53,7 @@ import * as winston from 'winston';
     AddressModule,
     LndModule,
     LightningModule,
+    ElectrumModule,
   ],
   controllers: [AppController],
   providers: [AppService],
