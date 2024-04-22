@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  JoinColumn,
-} from 'typeorm';
-import { BlockEntity } from '../block/block.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('exchange_rates')
 export class ExchangeRateEntity {
@@ -20,8 +13,4 @@ export class ExchangeRateEntity {
 
   @Column()
   height: number;
-
-  @OneToOne(() => BlockEntity, { eager: false })
-  @JoinColumn()
-  block: BlockEntity;
 }
