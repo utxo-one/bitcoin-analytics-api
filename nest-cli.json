@@ -28,6 +28,15 @@
         "tsConfigPath": "apps/lnd-service/tsconfig.app.json"
       }
     },
+    "chain-import": {
+      "type": "application",
+      "root": "apps/chain-import",
+      "entryFile": "main",
+      "sourceRoot": "apps/chain-import/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/chain-import/tsconfig.app.json"
+      }
+    },
     "entities": {
       "type": "library",
       "root": "libs/entities",
