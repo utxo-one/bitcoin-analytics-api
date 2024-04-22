@@ -11,6 +11,7 @@
     "start": "nest start",
     "dev:api": "nest start --debug --watch bitcoin-anaylytics-api",
     "dev:lnd": "nest start --debug --watch lnd-service",
+    "dev:chain-import": "nest start --debug --watch chain-import",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/apps/bitcoin-analytics-api/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

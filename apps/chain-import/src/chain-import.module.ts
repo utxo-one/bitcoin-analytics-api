@@ -1,21 +1,15 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
-import { CacheModule } from '@nestjs/cache-manager';
-import { RedisOptions } from './config/redis.config';
 import { WinstonModule } from 'nest-winston';
-import { ElectrumModule } from '../../../libs/services/electrum/electrum.module';
 import * as winston from 'winston';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { ChainImportService } from './chain-import.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    CacheModule.registerAsync(RedisOptions),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,
@@ -38,10 +32,7 @@ import * as winston from 'winston';
         }),
       ],
     }),
-    ExchangeRateModule,
-    ElectrumModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  providers: [ChainImportService],
 })
-export class AppModule {}
+export class ChainImportModule {}
